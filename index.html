@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThermoShield - Thermal Anomaly Detection</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">
+        <span class="flame">🔥</span>
+        <div>
+            <h2>ThermoShield</h2>
+            <small>Intelligent Thermal Anomaly Triage System</small>
+        </div>
+    </div>
+
+    <nav>
+        <button class="nav-btn active" data-page="triage">Live Triage Map</button>
+        <button class="nav-btn" data-page="simulator">Triage Engine Lab</button>
+        <button class="nav-btn" data-page="architecture">Pipeline & Telemetry</button>
+        <button class="nav-btn" data-page="audit">Audit Log</button>
+    </nav>
+
+    <button class="run-btn" onclick="simulateBatch()">
+        ⚡ Run Alert Batch
+    </button>
+
+    <button class="menu-btn" onclick="toggleMenu()">☰</button>
+</header>
+
+<div id="mobileMenu" class="mobile-menu">
+    <button onclick="showPage('triage')">Live Triage Map</button>
+    <button onclick="showPage('simulator')">Triage Engine Lab</button>
+    <button onclick="showPage('architecture')">Pipeline & Telemetry</button>
+    <button onclick="showPage('audit')">Audit Log</button>
+</div>
+
+<main class="container">
+
+    <!-- DASHBOARD STATISTICS -->
+
+    <section class="stats-grid">
+
+        <div class="stat-card">
+            <p>Raw FIRMS Detections</p>
+            <h1 id="totalDetections">8</h1>
+            <small>VIIRS / MODIS Satellite Data</small>
+        </div>
+
+        <div class="stat-card">
+            <p>False Alarms Suppressed</p>
+            <h1 id="suppressed">25%</h1>
+            <small>Industrial & Agricultural Filtering</small>
+        </div>
+
+        <div class="stat-card critical-card">
+            <p>Critical NDRF Alerts</p>
+            <h1 id="critical">3</h1>
+            <small>High Risk Thermal Events</small>
+        </div>
+
+        <div class="stat-card">
+            <p>Estimated Operational Savings</p>
+            <h1 id="savings">₹2.5 Cr</h1>
+            <small>Estimated Annual Savings</small>
+        </div>
+
+    </section>
+
+    <!-- LIVE TRIAGE PAGE -->
+
+    <section id="triage" class="page active">
+
+        <div class="section-heading">
+            <div>
+                <h2>🌍 Pan-India Live Triage Map</h2>
+                <p>Thermal anomaly monitoring and hotspot detection</p>
+            </div>
+
+            <button class="secondary-btn" onclick="resetMap()">
+                Reset Map
+            </button>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="legend">
+            <span class="red-dot"></span> Critical
+            <span class="yellow-dot"></span> Review
+            <span class="blue-dot"></span> Suppressed
+        </div>
+
+        <div class="content-grid">
+
+            <!-- HOTSPOT TABLE -->
+
+            <div class="panel">
+                <h3>Active Anomaly Triage Queue</h3>
+
+                <div class="toolbar">
+                    <input type="text" id="searchInput"
+                        placeholder="Search hotspot or location..."
+                        oninput="renderTable()">
+
+                    <select id="statusFilter" onchange="renderTable()">
+                        <option value="ALL">All Alerts</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="REVIEW">Review</option>
+                        <option value="SUPPRESSED">Suppressed</option>
+                    </select>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hotspot</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>FRP (MW)</th>
+                                <th>Risk Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hotspotTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- INSPECTOR -->
+
+            <div class="panel inspector">
+                <h3>Evidence-Fusion Inspector</h3>
+
+                <div id="inspectorContent">
+                    <h2>Select a hotspot</h2>
+                    <p>Click any hotspot from the table to inspect its details.</p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="dispatch-btn" onclick="dispatchAlert()">
+                        🚨 Dispatch
+                    </button>
+
+                    <button class="review-btn" onclick="reviewAlert()">
+                        Review
+                    </button>
+
+                    <button class="secondary-btn" onclick="suppressAlert()">
+                        Suppress
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CHART -->
+
+        <div class="panel chart-panel">
+            <h3>Thermal Anomaly Analysis</h3>
+            <canvas id="thermalChart"></canvas>
+        </div>
+
+    </section>
+
+    <!-- SIMULATOR PAGE -->
+
+    <section id="simulator" class="page">
+
+        <div class="section-heading">
+            <div>
+                <h2>⚙️ Triage Engine Lab</h2>
+                <p>Test the thermal anomaly risk classification engine</p>
+            </div>
+        </div>
+
+        <div class="panel simulator-panel">
+
+            <h3>Thermal Detection Parameters</h3>
+
+            <label>Fire Radiative Power (FRP) - MW</label>
+            <input type="number" id="frp" value="25" min="0">
+
+            <label>Seven Day Persistence</label>
+            <input type="number" id="persistence" value="3" min="0" max="7">
+
+            <label>Distance from Industrial Site (metres)</label>
+            <input type="number" id="distance" value="500" min="0">
+
+            <label>Confidence Level (%)</label>
+            <input type="number" id="confidence" value="85" min="0" max="100">
+
+            <button class="primary-btn" onclick="runEngine()">
+                Run Classification
+            </button>
+
+            <div id="engineResult" class="result-box">
+                Classification result will appear here.
+            </div>
+
+        </div>
+
+        <div class="panel">
+            <h3>Risk Classification Levels</h3>
+            <div class="risk-levels">
+                <div class="risk-item critical">CRITICAL - High Risk</div>
+                <div class="risk-item review">REVIEW - Medium Risk</div>
+                <div class="risk-item suppressed">SUPPRESSED - Low Risk</div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ARCHITECTURE PAGE -->
+
+    <section id="architecture" class="page">
+
+        <div class="section-heading">
+            <div>
+                <h2>🖥️ Pipeline & Telemetry</h2>
+                <p>ThermoShield system architecture and data flow</p>
+            </div>
+        </div>
+
+        <div class="pipeline">
+
+            <div class="pipeline-card">
+                <span>🛰️</span>
+                <h3>Satellite Data</h3>
+                <p>VIIRS and MODIS thermal observations.</p>
+            </div>
+
+            <div class="arrow">→</div>
+
+            <div class="pipeline-card">
+                <span>📡</span>
+                <h3>Data Ingestion</h3>
+                <p>Collect and process thermal detection records.</p>
+            </div>
+
+            <div class="arrow">→</div>
+
+            <div class="pipeline-card">
+                <span>⚙️</span>
+                <h3>Triage Engine</h3>
+                <p>Analyze FRP, persistence and location evidence.</p>
+            </div>
+
+            <div class="arrow">→</div>
+
+            <div class="pipeline-card">
+                <span>🚨</span>
+                <h3>Alert Dispatch</h3>
+                <p>Classify and display critical alerts for review.</p>
+            </div>
+
+        </div>
+
+        <div class="panel">
+            <h3>System Telemetry</h3>
+            <div class="telemetry-grid">
+                <div>
+                    <p>System Status</p>
+                    <h2 class="online">● ONLINE</h2>
+                </div>
+                <div>
+                    <p>Data Processing</p>
+                    <h2>ACTIVE</h2>
+                </div>
+                <div>
+                    <p>Detection Engine</p>
+                    <h2>READY</h2>
+                </div>
+                <div>
+                    <p>Sensor Network</p>
+                    <h2>CONNECTED</h2>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- AUDIT LOG PAGE -->
+
+    <section id="audit" class="page">
+
+        <div class="section-heading">
+            <div>
+                <h2>📋 Audit Log</h2>
+                <p>Record of operator actions and alert processing</p>
+            </div>
+
+            <button class="secondary-btn" onclick="clearAudit()">
+                Clear Log
+            </button>
+        </div>
+
+        <div class="panel">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Hotspot ID</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel export-panel">
+            <h3>Data Management</h3>
+            <button class="primary-btn" onclick="exportData()">
+                Download JSON
+            </button>
+
+            <button class="secondary-btn" onclick="exportCSV()">
+                Download CSV
+            </button>
+
+            <label for="importFile" class="secondary-btn import-label">
+                Import JSON
+            </label>
+            <input type="file" id="importFile" accept=".json"
+                onchange="importData(event)">
+        </div>
+
+    </section>
+
+</main>
+
+<footer>
+    <p>© 2026 ThermoShield | Intelligent Thermal Anomaly Detection System</p>
+    <small>Prototype Dashboard | Not an official emergency dispatch system</small>
+</footer>
+
+<script src="script.js"></script>
+
+</body>
+</html>
